@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>One Habit</title>
+
+  <meta name="theme-color" content="#111111" />
+
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background: #0b0b0b;
+      color: #f3f3f3;
+    }
+
+    .wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .card {
+      background: #141414;
+      border: 1px solid #222;
+      border-radius: 16px;
+      padding: 16px;
+      margin-top: 14px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #bdbdbd;
+    }
+
+    .habit {
+      font-size: 24px;
+      font-weight: 800;
+      margin: 8px 0 14px;
+    }
+
+    .input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 12px;
+      border-radius: 12px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      color: #f3f3f3;
+      font-size: 16px;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      background: #f3f3f3;
+      color: #0b0b0b;
+      font-size: 16px;
+      font-weight: 700;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+    }
+
+    .link {
+      background: none;
+      border: none;
+      color: #cfcfcf;
+      text-decoration: underline;
+      padding: 8px;
+      cursor: pointer;
+    }
+
+    .done {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid #2a2a2a;
+      font-weight: 700;
+    }
+
+    .grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .dot {
+      width: 44px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      border: 1px solid #2a2a2a;
+      background: #0f0f0f;
+      font-size: 12px;
+    }
+
+    footer {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 12px;
+      color: #b6b6b6;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+
+    <header class="top">
+      <h1>One Habit</h1>
+      <button id="resetBtn" class="link">Reset</button>
+    </header>
+
+    <section id="setup" class="card">
+      <p>Choose one habit you want to keep.</p>
+      <input id="habitInput" class="input" placeholder="e.g. Walk 10 minutes" />
+      <button id="startBtn" class="btn">Start</button>
+    </section>
+
+    <section id="today" class="card hidden">
+      <p class="label">Today</p>
+      <div id="habitName" class="habit"></div>
+      <button id="doneBtn" class="btn">Mark today as done</button>
+      <div id="doneState" class="done hidden">Done for today ✓</div>
+      <button id="progressBtn" class="link">Progress</button>
+    </section>
+
+    <section id="progress" class="card hidden">
+      <p class="label">Days you showed up</p>
+      <p id="countText"></p>
+      <div id="grid" class="grid"></div>
+      <button id="backBtn" class="link">Back</button>
+    </section>
+
+    <footer>
+      Stored locally on your device. No accounts. No streaks.
+    </footer>
+
+  </main>
+
+  <script>
+    const KEY = "oneHabit_v1";
+
+    function todayKey() {
+      const d = new Date();
+      return d.toISOString().slice(0, 10);
+    }
+
+    function loadState() {
+      try {
+        return JSON.parse(localStorage.getItem(KEY)) || { habit: "", days: [] };
+      } catch {
+        return { habit: "", days: [] };
+      }
+    }
+
+    function saveState(s) {
+      localStorage.setItem(KEY, JSON.stringify(s));
+    }
+
+    const els = {
+      setup: document.getElementById("setup"),
+      today: document.getElementById("today"),
+      progress: document.getElementById("progress"),
+      habitInput: document.getElementById("habitInput"),
+      habitName: document.getElementById("habitName"),
+      startBtn: document.getElementById("startBtn"),
+      doneBtn: document.getElementById("doneBtn"),
+      doneState: document.getElementById("doneState"),
+      progressBtn: document.getElementById("progressBtn"),
+      backBtn: document.getElementById("backBtn"),
+      resetBtn: document.getElementById("resetBtn"),
+      grid: document.getElementById("grid"),
+      countText: document.getElementById("countText")
+    };
+
+    let state = loadState();
+
+    function show(view) {
+      els.setup.classList.add("hidden");
+      els.today.classList.add("hidden");
+      els.progress.classList.add("hidden");
+      view.classList.remove("hidden");
+    }
+
+    function renderToday() {
+      const today = todayKey();
+      const done = state.days.includes(today);
+
+      els.habitName.textContent = state.habit;
+      els.doneBtn.disabled = done;
+      els.doneState.classList.toggle("hidden", !done);
+
+      show(els.today);
+    }
+
+    function renderProgress() {
+      els.grid.innerHTML = "";
+      state.days.forEach(d => {
+        const dot = document.createElement("div");
+        dot.className = "dot";
+        dot.textContent = d.slice(5);
+        els.grid.appendChild(dot);
+      });
+      els.countText.textContent = `${state.days.length} day(s) total`;
+      show(els.progress);
+    }
+
+    els.startBtn.onclick = () => {
+      const h = els.habitInput.value.trim();
+      if (!h) return;
+      state.habit = h;
+      saveState(state);
+      renderToday();
+    };
+
+    els.doneBtn.onclick = () => {
+      const t = todayKey();
+      if (!state.days.includes(t)) {
+        state.days.push(t);
+        saveState(state);
+      }
+      renderToday();
+    };
+
+    els.progressBtn.onclick = renderProgress;
+    els.backBtn.onclick = renderToday;
+
+    els.resetBtn.onclick = () => {
+      state = { habit: "", days: [] };
+      saveState(state);
+      show(els.setup);
+    };
+
+    if (state.habit) renderToday();
+  </script>
+</body>
+</html>
